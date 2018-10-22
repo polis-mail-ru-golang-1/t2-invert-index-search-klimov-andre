@@ -2,17 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
-	"sort"
 	"strings"
 
 	. "./index"
 )
-
-type resStruct struct {
-	filename string
-	weight   int
-}
 
 func main() {
 	if len(os.Args) == 1 {
@@ -22,43 +17,26 @@ func main() {
 		os.Exit(0)
 	}
 	var database map[string]Index
-	database = make(map[string]Index, 10)
+	database = make(map[string]Index, 1)
 
 	for i := 1; i < len(os.Args); i++ {
-		err := FileIndexing(database, os.Args[i])
+		filename := os.Args[i]
+		fileBytes, err := ioutil.ReadFile(filename)
 		if err != nil {
+			fmt.Println("Error occured while reading file:")
 			fmt.Println(err)
 			os.Exit(0)
 		}
+		FileIndexing(database, fileBytes, filename)
 	}
-
-	var userStr string
 
 	fmt.Println("Enter your phrase: ")
+	var userStr string
 	fmt.Scanln(&userStr)
 
-	var resultIdx []resStruct
 	userTokens := strings.Split(userStr, " ")
-	for i := 0; i < len(userTokens); i++ {
-		val, ok := database[userTokens[i]]
-		if ok {
-			for j := 0; j < len(val.Files); j++ {
-				var isExists bool
-				for k := 0; k < len(resultIdx); k++ {
-					if resultIdx[k].filename == val.Files[j].Filename {
-						resultIdx[k].weight += val.Files[j].Weight
-						isExists = true
-					}
-				}
-				if !isExists {
-					tmp := resStruct{val.Files[j].Filename, val.Files[j].Weight}
-					resultIdx = append(resultIdx, tmp)
-					sort.SliceStable(resultIdx, func(i, j int) bool { return resultIdx[i].weight > resultIdx[j].weight })
-				}
-			}
-		}
-	}
+	resultIdx := GetResults(database, userTokens)
 	for i := 0; i < len(resultIdx); i++ {
-		fmt.Println(resultIdx[i].filename, "; совпадений -", resultIdx[i].weight)
+		fmt.Println(resultIdx[i].Filename, "; совпадений -", resultIdx[i].Weight)
 	}
 }
